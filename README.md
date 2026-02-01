@@ -6,6 +6,8 @@ A high-performance background removal plugin for OBS Studio on macOS, powered by
 ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2FM2%2FM3%2FM4-green)
 ![License](https://img.shields.io/badge/license-GPL--2.0-orange)
 
+![Vision Background Removal Screenshot](assets/screenshot.jpg)
+
 ## Features
 
 - **Real-time background removal** using Apple Vision Framework
