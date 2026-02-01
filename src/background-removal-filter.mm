@@ -27,6 +27,7 @@ struct background_removal_filter_data {
     int background_mode;
     int blur_radius;
     float smoothing;
+    float sensitivity;
     uint32_t bg_color;
 
     // Graphics resources
@@ -119,6 +120,7 @@ static void *filter_create(obs_data_t *settings, obs_source_t *source)
     filter->background_mode = BG_MODE_BLUR;
     filter->blur_radius = 20;
     filter->smoothing = 1.0f;
+    filter->sensitivity = 0.5f;
     filter->bg_color = 0xFF00FF00; // Green
     filter->width = 0;
     filter->height = 0;
@@ -213,6 +215,7 @@ static void filter_update(void *data, obs_data_t *settings)
     filter->background_mode = (int)obs_data_get_int(settings, "background_mode");
     filter->blur_radius = (int)obs_data_get_int(settings, "blur_radius");
     filter->smoothing = (float)obs_data_get_double(settings, "smoothing");
+    filter->sensitivity = (float)obs_data_get_double(settings, "sensitivity");
     filter->bg_color = (uint32_t)obs_data_get_int(settings, "bg_color");
 
     int quality = (int)obs_data_get_int(settings, "quality");
@@ -258,6 +261,7 @@ static obs_properties_t *filter_get_properties(void *data)
 
     obs_properties_add_int_slider(props, "blur_radius", "Blur Radius", 5, 50, 1);
     obs_properties_add_color(props, "bg_color", "Background Color");
+    obs_properties_add_float_slider(props, "sensitivity", "Sensitivity", 0.0, 1.0, 0.05);
     obs_properties_add_float_slider(props, "smoothing", "Edge Smoothing", 0.0, 5.0, 0.1);
 
     return props;
@@ -270,6 +274,7 @@ static void filter_get_defaults(obs_data_t *settings)
     obs_data_set_default_int(settings, "background_mode", BG_MODE_BLUR);
     obs_data_set_default_int(settings, "blur_radius", 20);
     obs_data_set_default_int(settings, "bg_color", 0xFF00FF00);
+    obs_data_set_default_double(settings, "sensitivity", 0.5);
     obs_data_set_default_double(settings, "smoothing", 1.0);
 }
 
@@ -433,6 +438,19 @@ static void filter_video_render(void *data, gs_effect_t *effect)
         CGFloat scaleX = (CGFloat)filter->width / maskImage.extent.size.width;
         CGFloat scaleY = (CGFloat)filter->height / maskImage.extent.size.height;
         maskImage = [maskImage imageByApplyingTransform:CGAffineTransformMakeScale(scaleX, scaleY)];
+
+        // Apply sensitivity (adjust mask threshold using gamma correction)
+        // Lower sensitivity = more background removed (higher gamma)
+        // Higher sensitivity = more person kept (lower gamma)
+        CGFloat gamma = 2.0 - (filter->sensitivity * 2.0); // Range: 2.0 (sens=0) to 0.0 (sens=1.0)
+        gamma = MAX(0.1, gamma); // Clamp to avoid division issues
+        CIFilter *gammaFilter = [CIFilter filterWithName:@"CIGammaAdjust"];
+        [gammaFilter setValue:maskImage forKey:kCIInputImageKey];
+        [gammaFilter setValue:@(gamma) forKey:@"inputPower"];
+        CIImage *adjustedMask = gammaFilter.outputImage;
+        if (adjustedMask) {
+            maskImage = adjustedMask;
+        }
 
         // Smooth mask edges
         if (filter->smoothing > 0.1f) {
