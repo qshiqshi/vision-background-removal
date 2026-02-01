@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Background Removal - Setup Guide</title>
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #5b21b6;
+            --secondary: #10b981;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --bg-code: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--text), var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        section {
+            margin-bottom: 3rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        h2 .step-number {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .requirements-list {
+            list-style: none;
+        }
+
+        .requirements-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .requirements-list li:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--success);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        code {
+            background: var(--bg-code);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            background: var(--bg-code);
+            border-radius: 12px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .code-block code {
+            background: none;
+            padding: 0;
+            display: block;
+            white-space: pre;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: var(--border);
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+        }
+
+        .steps-list {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .steps-list li {
+            position: relative;
+            padding-left: 3rem;
+            padding-bottom: 1.5rem;
+            border-left: 2px solid var(--border);
+            margin-left: 1rem;
+        }
+
+        .steps-list li:last-child {
+            border-left: 2px solid transparent;
+            padding-bottom: 0;
+        }
+
+        .steps-list li::before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: -0.85rem;
+            top: 0;
+            width: 1.75rem;
+            height: 1.75rem;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .steps-list li h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .steps-list li p {
+            color: var(--text-muted);
+        }
+
+        .alert {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .alert-info {
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid var(--primary);
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid var(--warning);
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid var(--success);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .settings-table th,
+        .settings-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .settings-table th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .settings-table td:first-child {
+            font-weight: 500;
+        }
+
+        .settings-table td:last-child {
+            color: var(--text-muted);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            background: var(--border);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+
+        .tag-recommended {
+            background: var(--success);
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            h2 {
+                font-size: 1.35rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🎭</div>
+            <h1>OBS Background Removal</h1>
+            <p class="subtitle">Professionelle Hintergrundentfernung für macOS</p>
+            <span class="badge">Apple Silicon optimiert</span>
+        </header>
+
+        <section class="features">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Blitzschnell</h3>
+                <p>Nutzt Apple Vision Framework mit Hardware-Beschleunigung für Echtzeit-Verarbeitung</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Präzise Erkennung</h3>
+                <p>KI-basierte Person-Segmentation mit glatten Kanten und minimalen Artefakten</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Flexibel</h3>
+                <p>Weichzeichner, Farbhintergrund oder transparenter Hintergrund - du entscheidest</p>
+            </div>
+        </section>
+
+        <section>
+            <h2><span class="step-number">1</span> Systemanforderungen</h2>
+            <div class="card">
+                <ul class="requirements-list">
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <div>
+                            <strong>macOS 13.0 (Ventura)</strong> oder neuer
+                        </div>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <div>
+                            <strong>Apple Silicon</strong> (M1, M2, M3, M4) - Intel wird nicht unterstützt
+                        </div>
+                    </li>
+                    <li>
+                        <span class="check-icon">✓</span>
+                        <div>
+                            <strong>OBS Studio 29.0</strong> oder neuer
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="alert alert-warning">
+                <span class="alert-icon">⚠️</span>
+                <div>
+                    <strong>Wichtig:</strong> Dieses Plugin funktioniert nur auf Apple Silicon Macs (M1/M2/M3/M4).
+                    Intel-basierte Macs werden nicht unterstützt, da das Apple Vision Framework dort keine
+                    GPU-Beschleunigung bietet.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2><span class="step-number">2</span> Installation</h2>
+
+            <h3 style="margin: 1.5rem 0 1rem;">Option A: Automatische Installation</h3>
+            <p style="margin-bottom: 1rem;">Öffne Terminal und führe folgenden Befehl aus:</p>
+
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyCode(this)">Kopieren</button>
+                <code>cd "/pfad/zum/plugin"
+./install.sh</code>
+            </div>
+
+            <h3 style="margin: 1.5rem 0 1rem;">Option B: Manuelle Installation</h3>
+            <ol class="steps-list">
+                <li>
+                    <h4>Plugin-Ordner finden</h4>
+                    <p>Navigiere zum OBS Plugins-Verzeichnis:</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">Kopieren</button>
+                        <code>~/Library/Application Support/obs-studio/plugins/</code>
+                    </div>
+                    <p style="margin-top: 0.5rem;">Tipp: Drücke <code>Cmd + Shift + G</code> im Finder und füge den Pfad ein.</p>
+                </li>
+                <li>
+                    <h4>Plugin kopieren</h4>
+                    <p>Kopiere den gesamten Ordner <code>obs-background-removal-mac</code> in das plugins-Verzeichnis.</p>
+                </li>
+                <li>
+                    <h4>OBS neu starten</h4>
+                    <p>Beende OBS Studio vollständig und starte es neu.</p>
+                </li>
+            </ol>
+
+            <div class="alert alert-info">
+                <span class="alert-icon">💡</span>
+                <div>
+                    Falls der <code>plugins</code>-Ordner nicht existiert, erstelle ihn einfach.
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2><span class="step-number">3</span> Filter hinzufügen</h2>
+
+            <ol class="steps-list">
+                <li>
+                    <h4>Quelle auswählen</h4>
+                    <p>Rechtsklicke auf deine Video-Aufnahmequelle (Webcam) in OBS.</p>
+                </li>
+                <li>
+                    <h4>Filter öffnen</h4>
+                    <p>Wähle <strong>"Filter"</strong> aus dem Kontextmenü.</p>
+                </li>
+                <li>
+                    <h4>Effektfilter hinzufügen</h4>
+                    <p>Klicke auf das <strong>+</strong> unter "Effektfilter" und wähle <strong>"Background Removal"</strong>.</p>
+                </li>
+                <li>
+                    <h4>Einstellungen anpassen</h4>
+                    <p>Konfiguriere den Filter nach deinen Wünschen (siehe Einstellungen unten).</p>
+                </li>
+            </ol>
+        </section>
+
+        <section>
+            <h2><span class="step-number">4</span> Einstellungen</h2>
+
+            <div class="card">
+                <table class="settings-table">
+                    <thead>
+                        <tr>
+                            <th>Einstellung</th>
+                            <th>Optionen</th>
+                            <th>Beschreibung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Qualität</td>
+                            <td>
+                                <span class="tag">Schnell</span>
+                                <span class="tag tag-recommended">Ausgewogen</span>
+                                <span class="tag">Genau</span>
+                            </td>
+                            <td>Balance zwischen FPS und Erkennungsgenauigkeit</td>
+                        </tr>
+                        <tr>
+                            <td>Hintergrund-Modus</td>
+                            <td>
+                                <span class="tag tag-recommended">Weichzeichnen</span>
+                                <span class="tag">Einfarbig</span>
+                                <span class="tag">Transparent</span>
+                            </td>
+                            <td>Was mit dem Hintergrund passiert</td>
+                        </tr>
+                        <tr>
+                            <td>Weichzeichner-Stärke</td>
+                            <td>1 - 100</td>
+                            <td>Intensität des Hintergrund-Blur (Standard: 20)</td>
+                        </tr>
+                        <tr>
+                            <td>Kantenglättung</td>
+                            <td>0 - 10</td>
+                            <td>Glättet die Kanten um die Person (Standard: 1)</td>
+                        </tr>
+                        <tr>
+                            <td>Masken-Empfindlichkeit</td>
+                            <td>0.0 - 1.0</td>
+                            <td>Schwellenwert für Person-Erkennung (Standard: 0.5)</td>
+                        </tr>
+                        <tr>
+                            <td>Zeitliche Glättung</td>
+                            <td>An/Aus</td>
+                            <td>Reduziert Flimmern zwischen Frames</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-success">
+                <span class="alert-icon">✨</span>
+                <div>
+                    <strong>Empfehlung für beste Ergebnisse:</strong><br>
+                    Qualität: <strong>Ausgewogen</strong> | Modus: <strong>Weichzeichnen</strong> |
+                    Blur: <strong>20-30</strong> | Zeitliche Glättung: <strong>An</strong>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2><span class="step-number">5</span> Tipps für beste Ergebnisse</h2>
+
+            <div class="card">
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.75rem;">
+                        <span>💡</span>
+                        <div><strong>Gute Beleuchtung:</strong> Eine gleichmäßige Beleuchtung von vorne verbessert die Erkennung erheblich.</div>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.75rem;">
+                        <span>📏</span>
+                        <div><strong>Abstand zum Hintergrund:</strong> Mehr Abstand = bessere Trennung von Person und Hintergrund.</div>
+                    </li>
+                    <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.75rem;">
+                        <span>👕</span>
+                        <div><strong>Kontrastierende Kleidung:</strong> Vermeide Kleidung, die der Hintergrundfarbe ähnelt.</div>
+                    </li>
+                    <li style="padding: 0.75rem 0; display: flex; gap: 0.75rem;">
+                        <span>🎥</span>
+                        <div><strong>Niedrigere Auflösung:</strong> Falls Performance-Probleme auftreten, reduziere die Webcam-Auflösung auf 720p.</div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2><span class="step-number">6</span> Fehlerbehebung</h2>
+
+            <div class="card" style="margin-bottom: 1rem;">
+                <h4 style="margin-bottom: 0.5rem;">Plugin erscheint nicht in OBS</h4>
+                <p style="color: var(--text-muted);">
+                    Stelle sicher, dass der Plugin-Ordner korrekt strukturiert ist:
+                </p>
+                <div class="code-block">
+                    <code>obs-background-removal-mac/
+├── bin/
+│   └── obs-background-removal-mac.so
+└── data/
+    └── locale/
+        ├── en-US.ini
+        └── de-DE.ini</code>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 1rem;">
+                <h4 style="margin-bottom: 0.5rem;">OBS stürzt ab beim Laden</h4>
+                <p style="color: var(--text-muted);">
+                    Dies passiert, wenn du eine Intel-Version von OBS auf Apple Silicon nutzt (Rosetta).
+                    Lade die native Apple Silicon Version von OBS herunter.
+                </p>
+            </div>
+
+            <div class="card">
+                <h4 style="margin-bottom: 0.5rem;">Hohe CPU/GPU-Auslastung</h4>
+                <p style="color: var(--text-muted);">
+                    Wechsle zur Qualitätseinstellung "Schnell" oder reduziere die Webcam-Auflösung.
+                    Die GPU-Nutzung ist normal - das Plugin nutzt die Neural Engine deines M-Chips.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Für Entwickler: Selbst kompilieren</h2>
+
+            <p style="margin-bottom: 1rem;">Wenn du das Plugin selbst kompilieren möchtest:</p>
+
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyCode(this)">Kopieren</button>
+                <code># Voraussetzungen installieren
+brew install cmake
+
+# Repository klonen und bauen
+cd "/pfad/zum/OBS Background Removal"
+./.github/scripts/build-macos.sh
+
+# Plugin wird in ./release erstellt</code>
+            </div>
+        </section>
+
+        <footer>
+            <p>
+                OBS Background Removal Plugin v1.0.0<br>
+                Copyright © 2026 Andreas Kuschner<br><br>
+                Lizenziert unter <a href="https://www.gnu.org/licenses/gpl-2.0.html">GPL-2.0</a><br>
+                Erstellt mit Apple Vision Framework
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        function copyCode(button) {
+            const codeBlock = button.parentElement.querySelector('code');
+            const text = codeBlock.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Kopiert!';
+                button.style.background = 'var(--success)';
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

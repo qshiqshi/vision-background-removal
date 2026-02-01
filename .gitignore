@@ -1,0 +1,23 @@
+# Build directories
+build/
+release/
+dist/
+
+# Dependencies
+deps/
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# IDE
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+
+# Compiled files
+*.o
+*.so
+*.dylib
+*.plugin/
