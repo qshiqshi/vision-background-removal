@@ -60,6 +60,7 @@ cp -r ~/Downloads/vision-background-removal.plugin ~/Library/Application\ Suppor
    - **Quality:** Fast (60fps) / Balanced (30fps) / Accurate (15fps)
    - **Background:** Blur / Solid Color / Transparent
    - **Blur Radius:** Intensity of background blur
+   - **Sensitivity:** How much of the person is detected
    - **Edge Smoothing:** Smoothness of person outline
 
 ## Settings
@@ -71,6 +72,7 @@ cp -r ~/Downloads/vision-background-removal.plugin ~/Library/Application\ Suppor
 | Background | Blur, Solid Color, or Transparent |
 | Blur Radius | Strength of background blur (5-50) |
 | Background Color | Color for solid background mode |
+| Sensitivity | Mask threshold (0-1). Lower = more background removed, Higher = more person kept |
 | Edge Smoothing | Smoothness of mask edges (0-5) |
 
 ## Building from Source
