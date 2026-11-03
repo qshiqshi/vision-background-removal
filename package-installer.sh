@@ -1,292 +1,180 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# OBS Background Removal Plugin - Package Installer Creator
-# Creates a distributable installer package
+# OBS Vision Background Removal Plugin - package builder
+# Copyright (C) 2026 Andreas Kuschner
+#
+# Builds a distributable .zip/.dmg containing the built .plugin bundle and
+# double-clickable install/uninstall scripts. Requires the plugin to have been
+# built already (or calls the build script automatically).
 #
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_NAME="obs-background-removal-mac"
-VERSION="1.0.0"
-PACKAGE_NAME="${PLUGIN_NAME}-v${VERSION}-macOS-arm64"
+PLUGIN_NAME="vision-background-removal"
+ARCH="$(uname -m)"
 
-echo "============================================"
-echo "Creating Installer Package"
-echo "============================================"
-echo ""
+PLUGIN_VERSION="$(sed -n 's/^set(PLUGIN_VERSION "\(.*\)")/\1/p' "$SCRIPT_DIR/CMakeLists.txt" | head -1)"
+PLUGIN_VERSION="${PLUGIN_VERSION:-1.0.0}"
+PACKAGE_NAME="$PLUGIN_NAME-v$PLUGIN_VERSION-macOS-$ARCH"
+BUNDLE="$SCRIPT_DIR/build/$PLUGIN_NAME.plugin"
 
-# Create package directory
-PACKAGE_DIR="$SCRIPT_DIR/dist/$PACKAGE_NAME"
+if [[ ! -d "$BUNDLE" ]]; then
+    echo "Plugin has not been built yet. Building..."
+    "$SCRIPT_DIR/.github/scripts/build-macos.sh"
+fi
+
+[[ -d "$BUNDLE" ]] || {
+    echo "Error: build output not found: $BUNDLE" >&2
+    exit 1
+}
+
+DIST_DIR="$SCRIPT_DIR/dist"
+PACKAGE_DIR="$DIST_DIR/$PACKAGE_NAME"
 rm -rf "$PACKAGE_DIR"
-mkdir -p "$PACKAGE_DIR/plugin/bin"
-mkdir -p "$PACKAGE_DIR/plugin/data/locale"
-mkdir -p "$PACKAGE_DIR/source"
-mkdir -p "$PACKAGE_DIR/docs"
+mkdir -p "$PACKAGE_DIR"
 
-# Copy plugin data files
-cp -r "$SCRIPT_DIR/data/locale/"* "$PACKAGE_DIR/plugin/data/locale/"
+echo "Creating package in $PACKAGE_DIR ..."
+cp -R "$BUNDLE" "$PACKAGE_DIR/"
+if [[ -f "$SCRIPT_DIR/docs/setup-guide.html" ]]; then
+    cp "$SCRIPT_DIR/docs/setup-guide.html" "$PACKAGE_DIR/"
+fi
 
-# Copy source files for building
-cp -r "$SCRIPT_DIR/src" "$PACKAGE_DIR/source/"
-cp -r "$SCRIPT_DIR/cmake" "$PACKAGE_DIR/source/"
-cp "$SCRIPT_DIR/CMakeLists.txt" "$PACKAGE_DIR/source/"
-cp -r "$SCRIPT_DIR/.github" "$PACKAGE_DIR/source/"
-
-# Copy documentation
-cp "$SCRIPT_DIR/docs/setup-guide.html" "$PACKAGE_DIR/docs/"
-
-# Create installer script for the package
-cat > "$PACKAGE_DIR/install.command" << 'INSTALLER_EOF'
-#!/bin/bash
-#
-# OBS Background Removal Plugin - Installer
-# Double-click this file to install
-#
-
-set -e
+cat > "$PACKAGE_DIR/install.command" <<'INSTALLER_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_NAME="obs-background-removal-mac"
+PLUGIN_NAME="vision-background-removal"
 OBS_PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins"
+SOURCE_BUNDLE="$SCRIPT_DIR/$PLUGIN_NAME.plugin"
 
 clear
 echo "============================================"
-echo "  OBS Background Removal Plugin Installer"
+echo "  OBS Vision Background Removal - Installer"
 echo "============================================"
 echo ""
 
-# Check macOS version
-OS_VERSION=$(sw_vers -productVersion)
-echo "Detected macOS: $OS_VERSION"
-
-# Check architecture
-ARCH=$(uname -m)
-echo "Architecture: $ARCH"
-
-if [ "$ARCH" != "arm64" ]; then
-    echo ""
-    echo "ERROR: This plugin requires Apple Silicon (M1/M2/M3/M4)."
-    echo "Intel Macs are not supported."
-    echo ""
-    read -p "Press Enter to exit..."
+if [[ "$(uname -m)" != "arm64" ]]; then
+    echo "ERROR: this plugin requires an Apple Silicon Mac."
+    read -r -p "Press Enter to exit..."
     exit 1
 fi
 
-# Check if OBS is installed
-if [ ! -d "/Applications/OBS.app" ]; then
-    echo ""
-    echo "WARNING: OBS Studio not found in /Applications"
-    echo "Please install OBS Studio first: https://obsproject.com"
-    echo ""
+if [[ ! -d "$SOURCE_BUNDLE" ]]; then
+    echo "ERROR: $PLUGIN_NAME.plugin is missing from this package."
+    read -r -p "Press Enter to exit..."
+    exit 1
 fi
 
-# Check if binary exists or needs to be built
-if [ ! -f "$SCRIPT_DIR/plugin/bin/$PLUGIN_NAME.so" ]; then
-    echo ""
-    echo "Plugin binary not found. Building from source..."
-    echo ""
-
-    # Check for Xcode
-    if ! xcode-select -p &> /dev/null; then
-        echo "ERROR: Xcode Command Line Tools required."
-        echo "Install with: xcode-select --install"
-        echo ""
-        read -p "Press Enter to exit..."
-        exit 1
-    fi
-
-    # Check for CMake
-    if ! command -v cmake &> /dev/null; then
-        echo "CMake not found. Attempting to install via Homebrew..."
-        if command -v brew &> /dev/null; then
-            brew install cmake
-        else
-            echo "ERROR: Please install CMake: brew install cmake"
-            echo ""
-            read -p "Press Enter to exit..."
-            exit 1
-        fi
-    fi
-
-    # Build the plugin
-    echo "Building plugin..."
-    cd "$SCRIPT_DIR/source"
-
-    # Download OBS headers
-    OBS_VERSION="30.0.0"
-    if [ ! -d "deps/obs-studio" ]; then
-        echo "Downloading OBS headers..."
-        mkdir -p deps/obs-studio
-        curl -L "https://github.com/obsproject/obs-studio/archive/refs/tags/${OBS_VERSION}.tar.gz" -o /tmp/obs.tar.gz
-        tar -xzf /tmp/obs.tar.gz -C /tmp
-        cp -r "/tmp/obs-studio-${OBS_VERSION}/libobs" deps/obs-studio/
-        rm -rf /tmp/obs.tar.gz "/tmp/obs-studio-${OBS_VERSION}"
-    fi
-
-    # Build
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
-    cmake --build . --config Release
-
-    # Copy built binary
-    cp "$PLUGIN_NAME.so" "$SCRIPT_DIR/plugin/bin/"
-
-    cd "$SCRIPT_DIR"
-    echo ""
-    echo "Build completed successfully!"
+if [[ -d "/Applications/OBS.app" ]]; then
+    echo "Found OBS Studio at /Applications/OBS.app"
+else
+    echo "WARNING: OBS Studio was not found in /Applications."
 fi
 
-# Create plugins directory if needed
 mkdir -p "$OBS_PLUGIN_DIR"
-
-# Remove old version if exists
-if [ -d "$OBS_PLUGIN_DIR/$PLUGIN_NAME" ]; then
-    echo "Removing previous installation..."
-    rm -rf "$OBS_PLUGIN_DIR/$PLUGIN_NAME"
-fi
-
-# Install plugin
-echo ""
-echo "Installing plugin to: $OBS_PLUGIN_DIR"
-cp -r "$SCRIPT_DIR/plugin" "$OBS_PLUGIN_DIR/$PLUGIN_NAME"
+rm -rf "$OBS_PLUGIN_DIR/$PLUGIN_NAME.plugin"
+cp -R "$SOURCE_BUNDLE" "$OBS_PLUGIN_DIR/"
 
 echo ""
 echo "============================================"
-echo "  Installation Complete!"
+echo "  Installation complete"
 echo "============================================"
 echo ""
 echo "Next steps:"
-echo "  1. Restart OBS Studio (if running)"
-echo "  2. Add a video capture source"
-echo "  3. Right-click source > Filters"
-echo "  4. Click + > Background Removal"
+echo "  1. Restart OBS Studio (Cmd+Q, then reopen)"
+echo "  2. Right-click a video source -> Filters"
+echo "  3. Under Effect Filters click + -> Vision Background Removal"
 echo ""
-echo "For help, open: docs/setup-guide.html"
-echo ""
-read -p "Press Enter to exit..."
+read -r -p "Press Enter to exit..."
 INSTALLER_EOF
-
 chmod +x "$PACKAGE_DIR/install.command"
 
-# Create uninstaller
-cat > "$PACKAGE_DIR/uninstall.command" << 'UNINSTALL_EOF'
-#!/bin/bash
-#
-# OBS Background Removal Plugin - Uninstaller
-#
+cat > "$PACKAGE_DIR/uninstall.command" <<'UNINSTALLER_EOF'
+#!/usr/bin/env bash
+set -euo pipefail
 
-PLUGIN_NAME="obs-background-removal-mac"
-OBS_PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins"
+PLUGIN_NAME="vision-background-removal"
+PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins/$PLUGIN_NAME.plugin"
 
 clear
 echo "============================================"
-echo "  OBS Background Removal Plugin Uninstaller"
+echo "  OBS Vision Background Removal - Uninstall"
 echo "============================================"
 echo ""
 
-if [ -d "$OBS_PLUGIN_DIR/$PLUGIN_NAME" ]; then
-    echo "Removing plugin..."
-    rm -rf "$OBS_PLUGIN_DIR/$PLUGIN_NAME"
-    echo "Plugin removed successfully!"
+if [[ -d "$PLUGIN_DIR" ]]; then
+    rm -rf "$PLUGIN_DIR"
+    echo "Removed: $PLUGIN_DIR"
 else
-    echo "Plugin not found. Nothing to remove."
+    echo "Plugin is not installed."
 fi
 
 echo ""
-read -p "Press Enter to exit..."
-UNINSTALL_EOF
-
+read -r -p "Press Enter to exit..."
+UNINSTALLER_EOF
 chmod +x "$PACKAGE_DIR/uninstall.command"
 
-# Create README
-cat > "$PACKAGE_DIR/README.txt" << 'README_EOF'
+cat > "$PACKAGE_DIR/README.txt" <<README_EOF
 ============================================
-OBS Background Removal Plugin for macOS
-Version 1.0.0
+OBS Vision Background Removal
+Version $PLUGIN_VERSION - macOS $ARCH
 ============================================
 
-Remove video backgrounds in real-time using
-Apple's Vision Framework with hardware
-acceleration on Apple Silicon.
-
-INSTALLATION
-------------
-Double-click "install.command" to install.
-
-The installer will:
-- Build the plugin if needed
-- Install to OBS plugins folder
-- Guide you through setup
+Real-time background removal for OBS Studio using Apple's Vision Framework.
 
 REQUIREMENTS
 ------------
 - macOS 13.0 (Ventura) or later
-- Apple Silicon (M1/M2/M3/M4)
-- OBS Studio 29.0 or later
+- Apple Silicon Mac (M1/M2/M3/M4)
+- OBS Studio 33.0 or later
 
-FEATURES
---------
-- Real-time background blur
-- Solid color replacement (green screen)
-- Transparent background
-- Temporal smoothing (reduces flicker)
-- Adjustable quality settings
-- Edge refinement
+INSTALLATION
+------------
+Double-click "install.command".
 
-DOCUMENTATION
--------------
-Open docs/setup-guide.html for detailed
-instructions and troubleshooting.
+The installer copies "vision-background-removal.plugin" to:
+  ~/Library/Application Support/obs-studio/plugins/
+
+Then restart OBS Studio and add the filter:
+  Right-click a video source -> Filters -> + -> Vision Background Removal
 
 UNINSTALL
 ---------
-Double-click "uninstall.command" to remove.
+Double-click "uninstall.command".
+
+DOCUMENTATION
+-------------
+Open setup-guide.html for detailed instructions.
 
 LICENSE
 -------
-GPL-2.0 - See source/LICENSE for details.
+GPL-2.0. See the project repository for details.
 
 Copyright (C) 2026 Andreas Kuschner
 README_EOF
 
-# Create ZIP archive
 echo "Creating ZIP archive..."
-cd "$SCRIPT_DIR/dist"
-zip -r "${PACKAGE_NAME}.zip" "$PACKAGE_NAME"
+rm -f "$DIST_DIR/$PACKAGE_NAME.zip"
+( cd "$DIST_DIR" && COPYFILE_DISABLE=1 ditto -c -k --keepParent --norsrc "$PACKAGE_NAME" "$PACKAGE_NAME.zip" )
 
-# Create DMG if hdiutil is available
-if command -v hdiutil &> /dev/null; then
-    echo "Creating DMG installer..."
-
-    DMG_TEMP="$SCRIPT_DIR/dist/dmg_temp"
-    DMG_FINAL="$SCRIPT_DIR/dist/${PACKAGE_NAME}.dmg"
-
+if command -v hdiutil >/dev/null 2>&1; then
+    echo "Creating DMG..."
+    DMG_TEMP="$DIST_DIR/dmg_temp"
+    DMG_FINAL="$DIST_DIR/$PACKAGE_NAME.dmg"
     rm -rf "$DMG_TEMP" "$DMG_FINAL"
     mkdir -p "$DMG_TEMP"
-
-    cp -r "$PACKAGE_DIR" "$DMG_TEMP/"
-
-    # Create DMG
-    hdiutil create -volname "OBS Background Removal" \
-        -srcfolder "$DMG_TEMP" \
-        -ov -format UDZO \
-        "$DMG_FINAL"
-
+    cp -R "$PACKAGE_DIR" "$DMG_TEMP/"
+    hdiutil create -volname "OBS Vision Background Removal" \
+        -srcfolder "$DMG_TEMP" -ov -format UDZO "$DMG_FINAL" >/dev/null
     rm -rf "$DMG_TEMP"
-
-    echo "DMG created: $DMG_FINAL"
+    echo "DMG: $DMG_FINAL"
 fi
 
 echo ""
-echo "============================================"
-echo "Package created successfully!"
-echo "============================================"
-echo ""
-echo "Files created in dist/:"
-ls -la "$SCRIPT_DIR/dist/"
-echo ""
-echo "Distribute either:"
-echo "  - ${PACKAGE_NAME}.zip"
-echo "  - ${PACKAGE_NAME}.dmg (if available)"
-echo ""
+echo "Package created:"
+echo "  $DIST_DIR/$PACKAGE_NAME.zip"
+if [[ -f "$DIST_DIR/$PACKAGE_NAME.dmg" ]]; then
+    echo "  $DIST_DIR/$PACKAGE_NAME.dmg"
+fi

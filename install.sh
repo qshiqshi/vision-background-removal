@@ -1,55 +1,66 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# OBS Background Removal Plugin - Quick Install Script
+# OBS Vision Background Removal Plugin - Installer
 # Copyright (C) 2026 Andreas Kuschner
 #
+# Installs a previously built plugin bundle into the current user's
+# OBS plugin directory.
+#
+# Usage:
+#   ./install.sh             # install build/vision-background-removal.plugin
+#   ./install.sh --uninstall # remove the installed plugin
+#
 
-set -e
+set -euo pipefail
 
-PLUGIN_NAME="obs-background-removal-mac"
-PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins"
-
-echo "========================================"
-echo "OBS Background Removal - Quick Install"
-echo "========================================"
-echo ""
-
-# Check if OBS is installed
-if [ ! -d "/Applications/OBS.app" ]; then
-    echo "Warning: OBS Studio not found in /Applications"
-    echo "Please install OBS Studio first: https://obsproject.com"
-    exit 1
-fi
-
-# Check if plugin directory exists
-if [ ! -d "$PLUGIN_DIR" ]; then
-    echo "Creating plugins directory..."
-    mkdir -p "$PLUGIN_DIR"
-fi
-
-# Check if script is run from plugin directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_NAME="vision-background-removal"
+OBS_PLUGIN_DIR="$HOME/Library/Application Support/obs-studio/plugins"
+INSTALLED_BUNDLE="$OBS_PLUGIN_DIR/$PLUGIN_NAME.plugin"
 
-if [ -d "$SCRIPT_DIR/release/$PLUGIN_NAME" ]; then
-    SOURCE_DIR="$SCRIPT_DIR/release/$PLUGIN_NAME"
-elif [ -d "$SCRIPT_DIR/$PLUGIN_NAME" ]; then
-    SOURCE_DIR="$SCRIPT_DIR/$PLUGIN_NAME"
-else
-    echo "Error: Plugin files not found."
-    echo "Please run the build script first: ./.github/scripts/build-macos.sh"
+if [[ "${1:-}" == "--uninstall" ]]; then
+    if [[ -d "$INSTALLED_BUNDLE" ]]; then
+        rm -rf "$INSTALLED_BUNDLE"
+        echo "Removed: $INSTALLED_BUNDLE"
+    else
+        echo "Plugin is not installed."
+    fi
+    exit 0
+fi
+
+if [[ ! -d "/Applications/OBS.app" ]]; then
+    echo "Warning: OBS Studio was not found in /Applications." >&2
+fi
+
+if [[ "$(uname -m)" != "arm64" ]]; then
+    echo "Error: this plugin requires an Apple Silicon Mac." >&2
     exit 1
 fi
 
-# Install plugin
-echo "Installing plugin..."
-cp -r "$SOURCE_DIR" "$PLUGIN_DIR/"
+SOURCE_BUNDLE=""
+for candidate in \
+    "$SCRIPT_DIR/build/$PLUGIN_NAME.plugin" \
+    "$SCRIPT_DIR/release/$PLUGIN_NAME.plugin" \
+    "$SCRIPT_DIR/$PLUGIN_NAME.plugin"; do
+    if [[ -d "$candidate" ]]; then
+        SOURCE_BUNDLE="$candidate"
+        break
+    fi
+done
 
-echo ""
-echo "Installation complete!"
+if [[ -z "$SOURCE_BUNDLE" ]]; then
+    echo "Error: no built plugin found." >&2
+    echo "Build it first with: ./.github/scripts/build-macos.sh" >&2
+    exit 1
+fi
+
+mkdir -p "$OBS_PLUGIN_DIR"
+rm -rf "$INSTALLED_BUNDLE"
+cp -R "$SOURCE_BUNDLE" "$INSTALLED_BUNDLE"
+
+echo "Installed: $INSTALLED_BUNDLE"
 echo ""
 echo "Next steps:"
-echo "  1. Restart OBS Studio"
-echo "  2. Add a video capture source"
-echo "  3. Right-click source > Filters > + > Background Removal"
-echo ""
-echo "Enjoy your virtual background!"
+echo "  1. Restart OBS Studio (Cmd+Q, then reopen)"
+echo "  2. Right-click a video source -> Filters"
+echo "  3. Under Effect Filters click + and choose \"Vision Background Removal\""

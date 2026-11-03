@@ -420,7 +420,7 @@
                     <li>
                         <span class="check-icon">✓</span>
                         <div>
-                            <strong>OBS Studio 29.0</strong> oder neuer
+                            <strong>OBS Studio 33.0</strong> oder neuer
                         </div>
                     </li>
                 </ul>
@@ -461,7 +461,7 @@
                 </li>
                 <li>
                     <h4>Plugin kopieren</h4>
-                    <p>Kopiere den gesamten Ordner <code>obs-background-removal-mac</code> in das plugins-Verzeichnis.</p>
+                    <p>Kopiere den gesamten Ordner <code>vision-background-removal.plugin</code> in das plugins-Verzeichnis.</p>
                 </li>
                 <li>
                     <h4>OBS neu starten</h4>
@@ -491,7 +491,7 @@
                 </li>
                 <li>
                     <h4>Effektfilter hinzufügen</h4>
-                    <p>Klicke auf das <strong>+</strong> unter "Effektfilter" und wähle <strong>"Background Removal"</strong>.</p>
+                    <p>Klicke auf das <strong>+</strong> unter "Effektfilter" und wähle <strong>"Vision Background Removal"</strong>.</p>
                 </li>
                 <li>
                     <h4>Einstellungen anpassen</h4>
@@ -514,42 +514,47 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Qualität</td>
+                            <td>Enable</td>
+                            <td>An/Aus</td>
+                            <td>Filter ein- oder ausschalten</td>
+                        </tr>
+                        <tr>
+                            <td>Quality</td>
                             <td>
-                                <span class="tag">Schnell</span>
-                                <span class="tag tag-recommended">Ausgewogen</span>
-                                <span class="tag">Genau</span>
+                                <span class="tag">Fast</span>
+                                <span class="tag tag-recommended">Balanced</span>
+                                <span class="tag">Accurate</span>
                             </td>
                             <td>Balance zwischen FPS und Erkennungsgenauigkeit</td>
                         </tr>
                         <tr>
-                            <td>Hintergrund-Modus</td>
+                            <td>Background</td>
                             <td>
-                                <span class="tag tag-recommended">Weichzeichnen</span>
-                                <span class="tag">Einfarbig</span>
+                                <span class="tag tag-recommended">Blur</span>
+                                <span class="tag">Solid Color</span>
                                 <span class="tag">Transparent</span>
                             </td>
                             <td>Was mit dem Hintergrund passiert</td>
                         </tr>
                         <tr>
-                            <td>Weichzeichner-Stärke</td>
-                            <td>1 - 100</td>
+                            <td>Blur Radius</td>
+                            <td>5 - 50</td>
                             <td>Intensität des Hintergrund-Blur (Standard: 20)</td>
                         </tr>
                         <tr>
-                            <td>Kantenglättung</td>
-                            <td>0 - 10</td>
-                            <td>Glättet die Kanten um die Person (Standard: 1)</td>
+                            <td>Background Color</td>
+                            <td>Farbe</td>
+                            <td>Farbe für den Solid-Color-Modus (Standard: Grün)</td>
                         </tr>
                         <tr>
-                            <td>Masken-Empfindlichkeit</td>
+                            <td>Sensitivity</td>
                             <td>0.0 - 1.0</td>
                             <td>Schwellenwert für Person-Erkennung (Standard: 0.5)</td>
                         </tr>
                         <tr>
-                            <td>Zeitliche Glättung</td>
-                            <td>An/Aus</td>
-                            <td>Reduziert Flimmern zwischen Frames</td>
+                            <td>Edge Smoothing</td>
+                            <td>0.0 - 5.0</td>
+                            <td>Glättet die Kanten um die Person (Standard: 1.0)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -559,8 +564,8 @@
                 <span class="alert-icon">✨</span>
                 <div>
                     <strong>Empfehlung für beste Ergebnisse:</strong><br>
-                    Qualität: <strong>Ausgewogen</strong> | Modus: <strong>Weichzeichnen</strong> |
-                    Blur: <strong>20-30</strong> | Zeitliche Glättung: <strong>An</strong>
+                    Quality: <strong>Balanced</strong> | Background: <strong>Blur</strong> |
+                    Blur Radius: <strong>20-30</strong> | Edge Smoothing: <strong>1.0</strong>
                 </div>
             </div>
         </section>
@@ -599,13 +604,15 @@
                     Stelle sicher, dass der Plugin-Ordner korrekt strukturiert ist:
                 </p>
                 <div class="code-block">
-                    <code>obs-background-removal-mac/
-├── bin/
-│   └── obs-background-removal-mac.so
-└── data/
-    └── locale/
-        ├── en-US.ini
-        └── de-DE.ini</code>
+                    <code>vision-background-removal.plugin/
+└── Contents/
+    ├── Info.plist
+    ├── MacOS/
+    │   └── vision-background-removal
+    └── Resources/
+        └── locale/
+            ├── en-US.ini
+            └── de-DE.ini</code>
                 </div>
             </div>
 

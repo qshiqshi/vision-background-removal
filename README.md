@@ -24,7 +24,7 @@ A high-performance background removal plugin for OBS Studio on macOS, powered by
 
 - macOS 13.0 (Ventura) or later
 - Apple Silicon Mac (M1, M2, M3, M4)
-- OBS Studio 29.0 or later
+- OBS Studio 33.0 or later
 
 > **Note:** This plugin does NOT work on Intel Macs. It requires Apple Silicon for the Vision Framework's Neural Engine acceleration.
 
@@ -48,6 +48,12 @@ mkdir -p ~/Library/Application\ Support/obs-studio/plugins
 
 # Copy plugin (adjust path to your download location)
 cp -r ~/Downloads/vision-background-removal.plugin ~/Library/Application\ Support/obs-studio/plugins/
+```
+
+If you built the plugin from source, you can install it with:
+
+```bash
+./install.sh
 ```
 
 ## Usage
@@ -79,27 +85,45 @@ cp -r ~/Downloads/vision-background-removal.plugin ~/Library/Application\ Suppor
 
 ### Prerequisites
 
-- Xcode Command Line Tools
+- macOS 13+ on Apple Silicon
+- Xcode Command Line Tools (`xcode-select --install`)
 - CMake 3.28+
+- Homebrew (used to install SIMDe)
+- OBS Studio 33+ installed at `/Applications/OBS.app`
 
-### Build
+### Quick build
 
 ```bash
-# Install CMake if needed
-brew install cmake
+# Installs SIMDe (if needed), fetches matching OBS headers, builds, and packages
+./.github/scripts/build-macos.sh
 
-# Clone the repository
-git clone https://github.com/qshiqshi/vision-background-removal.git
-cd vision-background-removal
-
-# Build
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
-
-# The plugin will be at:
-# build/vision-background-removal.plugin/
+# Install into ~/Library/Application Support/obs-studio/plugins
+./install.sh
 ```
+
+### Manual build
+
+```bash
+# Dependencies
+brew install cmake simde
+
+# OBS headers (must match the installed OBS version)
+OBS_VERSION=$(defaults read /Applications/OBS.app/Contents/Info.plist CFBundleShortVersionString)
+git clone --depth 1 --branch "$OBS_VERSION" --filter=blob:none --sparse \
+    https://github.com/obsproject/obs-studio.git deps/obs-studio
+git -C deps/obs-studio sparse-checkout set libobs
+
+# Configure and build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+
+# The plugin bundle is at build/vision-background-removal.plugin/
+# Install it into the current user's OBS plugin folder:
+cmake --install build
+```
+
+Both build paths target Apple Silicon (`arm64`) and macOS 13.0+. The plugin
+links against the `libobs.framework` inside `/Applications/OBS.app`.
 
 ## Performance Tips
 
