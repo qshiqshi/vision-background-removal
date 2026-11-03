@@ -66,11 +66,11 @@ struct obs_source_info background_removal_filter_info = {
     .get_name = filter_get_name,
     .create = filter_create,
     .destroy = filter_destroy,
-    .update = filter_update,
-    .get_properties = filter_get_properties,
     .get_defaults = filter_get_defaults,
-    .video_render = filter_video_render,
+    .get_properties = filter_get_properties,
+    .update = filter_update,
     .video_tick = filter_video_tick,
+    .video_render = filter_video_render,
 };
 
 #pragma mark - Helper Functions
@@ -147,6 +147,9 @@ static void *filter_create(obs_data_t *settings, obs_source_t *source)
         filter->ciContext = (void *)CFBridgingRetain(ctx);
     }
 
+    // Make sure a newly created filter has all settings populated even if
+    // OBS did not call get_defaults first.
+    filter_get_defaults(settings);
     filter_update(filter, settings);
 
     blog(LOG_INFO, "[Vision Background Removal] Filter created");
@@ -316,6 +319,10 @@ static void filter_video_tick(void *data, float seconds)
             filter->output_texture = NULL;
         }
 
+        // GS_DYNAMIC lets us refresh this texture with gs_texture_set_image
+        // every frame without reallocating it.
+        filter->output_texture = gs_texture_create(width, height, GS_BGRA, 1, NULL, GS_DYNAMIC);
+
         obs_leave_graphics();
 
         create_buffer_pool(filter, width, height);
@@ -342,7 +349,8 @@ static void filter_video_render(void *data, gs_effect_t *effect)
     // Skip if not ready
     if (!filter->enabled || !filter->texrender || !filter->stagesurface ||
         filter->width == 0 || filter->height == 0 || !filter->bufferPool ||
-        !filter->sequenceHandler || !filter->segmentationRequest || !filter->ciContext) {
+        !filter->output_texture || !filter->sequenceHandler ||
+        !filter->segmentationRequest || !filter->ciContext) {
         obs_source_skip_video_filter(filter->source);
         return;
     }
@@ -359,7 +367,22 @@ static void filter_video_render(void *data, gs_effect_t *effect)
     gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
     gs_ortho(0.0f, (float)filter->width, 0.0f, (float)filter->height, -100.0f, 100.0f);
 
-    obs_source_video_render(target);
+    // Render the target source with the default effect active. Without this,
+    // the target's own video_render callback receives a NULL effect.
+    gs_effect_t *baseEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+    gs_technique_t *targetTech = gs_effect_get_technique(baseEffect, "Draw");
+    if (baseEffect && targetTech) {
+        const size_t targetPasses = gs_technique_begin(targetTech);
+        for (size_t i = 0; i < targetPasses; i++) {
+            gs_technique_begin_pass(targetTech, i);
+            obs_source_video_render(target);
+            gs_technique_end_pass(targetTech);
+        }
+        gs_technique_end(targetTech);
+    } else {
+        obs_source_video_render(target);
+    }
+
     gs_texrender_end(filter->texrender);
 
     gs_texture_t *source_texture = gs_texrender_get_texture(filter->texrender);
@@ -503,9 +526,10 @@ static void filter_video_render(void *data, gs_effect_t *effect)
 
             case BG_MODE_COLOR: {
                 // Create solid color background
-                uint8_t r = (filter->bg_color >> 16) & 0xFF;
+                // OBS stores colors as 0xAABBGGRR (red in the low byte).
+                uint8_t r = (filter->bg_color >> 0) & 0xFF;
                 uint8_t g = (filter->bg_color >> 8) & 0xFF;
-                uint8_t b = (filter->bg_color >> 0) & 0xFF;
+                uint8_t b = (filter->bg_color >> 16) & 0xFF;
                 CIImage *colorBg = [CIImage imageWithColor:[CIColor colorWithRed:r/255.0 green:g/255.0 blue:b/255.0 alpha:1.0]];
                 colorBg = [colorBg imageByCroppingToRect:inputImage.extent];
 
@@ -542,15 +566,11 @@ static void filter_video_render(void *data, gs_effect_t *effect)
         CVPixelBufferLockBaseAddress(outputBuffer, kCVPixelBufferLock_ReadOnly);
         uint8_t *outData = (uint8_t *)CVPixelBufferGetBaseAddress(outputBuffer);
 
-        if (filter->output_texture) {
-            gs_texture_destroy(filter->output_texture);
-            filter->output_texture = NULL;
-        }
-
-        if (outData) {
-            filter->output_texture = gs_texture_create(filter->width, filter->height,
-                                                        GS_BGRA, 1,
-                                                        (const uint8_t **)&outData, 0);
+        if (outData && filter->output_texture) {
+            // Upload the image with the pixel buffer's real row stride
+            // (rows may be padded).
+            gs_texture_set_image(filter->output_texture, outData,
+                                 (uint32_t)CVPixelBufferGetBytesPerRow(outputBuffer), false);
         }
 
         CVPixelBufferUnlockBaseAddress(outputBuffer, kCVPixelBufferLock_ReadOnly);
@@ -558,18 +578,27 @@ static void filter_video_render(void *data, gs_effect_t *effect)
         CVPixelBufferRelease(inputBuffer);
     }
 
-    // Render output texture
+    // Render the processed texture with the default effect.
     gs_texture_t *renderTex = filter->output_texture ? filter->output_texture : source_texture;
+    gs_effect_t *base = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+    gs_technique_t *tech = gs_effect_get_technique(base, "Draw");
+    gs_eparam_t *image = gs_effect_get_param_by_name(base, "image");
 
-    gs_effect_t *defaultEffect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-    gs_technique_t *tech = gs_effect_get_technique(defaultEffect, "Draw");
-    gs_eparam_t *param = gs_effect_get_param_by_name(defaultEffect, "image");
+    if (!base || !tech || !image) {
+        obs_source_skip_video_filter(filter->source);
+        return;
+    }
 
-    gs_effect_set_texture(param, renderTex);
+    if (gs_get_linear_srgb())
+        gs_effect_set_texture_srgb(image, renderTex);
+    else
+        gs_effect_set_texture(image, renderTex);
 
-    gs_technique_begin(tech);
-    gs_technique_begin_pass(tech, 0);
-    gs_draw_sprite(renderTex, 0, filter->width, filter->height);
-    gs_technique_end_pass(tech);
+    const size_t passes = gs_technique_begin(tech);
+    for (size_t i = 0; i < passes; i++) {
+        gs_technique_begin_pass(tech, i);
+        gs_draw_sprite(renderTex, 0, filter->width, filter->height);
+        gs_technique_end_pass(tech);
+    }
     gs_technique_end(tech);
 }

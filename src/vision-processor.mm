@@ -244,8 +244,6 @@
 
     // Apply temporal smoothing
     if (_temporalSmoothing && _previousMask) {
-        CIFilter *blendFilter = [CIFilter filterWithName:@"CISourceOverCompositing"];
-
         // Multiply current mask by factor
         CIFilter *currentMultiply = [CIFilter filterWithName:@"CIColorMatrix"];
         [currentMultiply setValue:maskImage forKey:kCIInputImageKey];
